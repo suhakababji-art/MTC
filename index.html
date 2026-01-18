@@ -1,341 +1,300 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MovieTalk Club</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-<style>
-:root {
-    --dark-green: #004d40;
-    --beige-bg: #e8e6d9;
-    --text-color: #2c2c2c;
-    --accent-blue: #a0d2eb;
-}
-body {
-    background-color: var(--beige-bg);
-    color: var(--text-color);
-    font-family: 'Cairo', sans-serif;
-    margin: 0;
-}
-nav {
-    background-color: var(--dark-green);
-    padding: 15px 50px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: white;
-}
-.nav-brand {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.8rem;
-    cursor: pointer;
-}
-.nav-links button {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.1rem;
-    margin-right: 20px;
-    cursor: pointer;
-    font-family: 'Cairo', sans-serif;
-}
-.hero {
-    text-align: center;
-    padding: 80px 20px;
-    background-color: #f4f3ed;
-}
-.hero h2 {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-size: 4rem;
-    color: var(--dark-green);
-    margin-bottom: 0;
-}
-.hero p {
-    font-size: 1.5rem;
-    font-family: 'Playfair Display', serif;
-    margin-top: 10px;
-}
-.section-title {
-    padding: 20px 50px;
-    font-size: 1.8rem;
-    border-right: 8px solid #00796b;
-    margin: 40px 50px;
-}
-.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
-.movie-card {
-    display: flex;
-    background: #fffdf9;
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
-    position: relative;
-}
-.movie-poster {
-    background-color: #6d5d6e;
-    color: white;
-    width: 30%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 40px;
-    font-family: 'Playfair Display', serif;
-    font-size: 1.8rem;
-}
-.movie-info {
-    width: 70%;
-    padding: 30px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-.meta-data {
-    display: flex;
-    gap: 20px;
-    color: #777;
-    font-size: 0.9rem;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-}
-.description { font-size: 1.1rem; line-height: 1.8; color: #444; }
-.admin-controls { display: none; margin: 20px 50px; }
-.delete-btn {
-    position: absolute; top: 10px; left: 10px;
-    background: #ff5252; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;
-    display: none;
-}
-.analyzer-box { background: white; padding: 40px; border-radius: 15px; text-align: center; }
-input { width: 80%; padding: 15px; border: 1px solid #ccc; border-radius: 30px; margin-bottom: 20px; outline: none; }
-.btn-main { background: var(--dark-green); color: white; padding: 12px 40px; border: none; border-radius: 30px; cursor: pointer; font-size: 1.1rem; }
-section { display: none; }
-section.active { display: block; }
-.vote-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fffdf9;
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-}
-.vote-btn {
-    background: var(--accent-blue);
-    border: none;
-    padding: 8px 20px;
-    border-radius: 10px;
-    cursor: pointer;
-}
-.admins-section { padding: 20px; }
-.admin-card {
-    background: linear-gradient(145deg, #f9f4e6, #f0e5c2);
-    border-radius: 20px;
-    padding: 25px 20px;
-    max-width: 300px;
-    text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    color: #2c2c2c;
-    font-family: 'Cairo', sans-serif;
-    margin-top: 20px;
-}
-.admin-card h3 {
-    margin: 0; font-family: 'Playfair Display', serif; font-size: 1.5rem; color: #b38f00;
-}
-.admin-card p { margin: 5px 0; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MovieTalk Club</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --dark-green: #004d40;
+      --beige-bg: #e8e6d9;
+      --text-color: #2c2c2c;
+      --accent-gold: #c9a24d;
+    }
+
+    body {
+      background-color: var(--beige-bg);
+      color: var(--text-color);
+      font-family: 'Cairo', sans-serif;
+      margin: 0;
+    }
+
+    /* ===== Navbar ===== */
+    nav {
+      background-color: var(--dark-green);
+      padding: 15px 50px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+    }
+
+    .nav-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      cursor: pointer;
+    }
+
+    .nav-links button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.1rem;
+      margin-left: 20px;
+      cursor: pointer;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    /* ===== Hero ===== */
+    .hero {
+      text-align: center;
+      padding: 80px 20px;
+      background-color: #f4f3ed;
+    }
+
+    .hero h2 {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 4rem;
+      color: var(--dark-green);
+      margin-bottom: 0;
+    }
+
+    .hero p {
+      font-size: 1.5rem;
+      font-family: 'Playfair Display', serif;
+      margin-top: 10px;
+    }
+
+    /* ===== Sections ===== */
+    section {
+      display: none;
+    }
+
+    section.active {
+      display: block;
+    }
+
+    .section-title {
+      padding: 20px 50px;
+      font-size: 1.8rem;
+      border-left: 8px solid #00796b;
+      margin: 40px 50px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    /* ===== Movie Card ===== */
+    .movie-card {
+      display: flex;
+      background: #fffdf9;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    .movie-poster {
+      width: 30%;
+      background-color: #6d5d6e;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+    }
+
+    .movie-info {
+      width: 70%;
+      padding: 30px;
+    }
+
+    .meta-data {
+      display: flex;
+      gap: 20px;
+      color: #777;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+
+    .description {
+      font-size: 1.1rem;
+      line-height: 1.8;
+    }
+
+    /* ===== Analyzer ===== */
+    .analyzer-box {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      text-align: center;
+    }
+
+    input {
+      width: 80%;
+      padding: 15px;
+      border-radius: 30px;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+    }
+
+    .btn-main {
+      background: var(--dark-green);
+      color: white;
+      padding: 12px 40px;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    /* ===== Admin Card ===== */
+    .admin-card {
+      background: white;
+      max-width: 350px;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      border: 2px solid var(--accent-gold);
+    }
+
+    .admin-card h3 {
+      margin-bottom: 10px;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .gold-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f5d37a, #c9a24d);
+      margin: 0 auto 15px;
+    }
+
+    /* ===============================
+       MOBILE RESPONSIVE
+       =============================== */
+    @media (max-width: 768px) {
+
+      nav {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 15px 20px;
+      }
+
+      .nav-links {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        margin-top: 15px;
+      }
+
+      .nav-links button {
+        margin: 6px 0;
+        text-align: left;
+      }
+
+      .hero h2 {
+        font-size: 2.3rem;
+      }
+
+      .hero p {
+        font-size: 1.2rem;
+      }
+
+      .movie-card {
+        flex-direction: column;
+      }
+
+      .movie-poster,
+      .movie-info {
+        width: 100%;
+      }
+
+      input {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
 <nav>
-    <div class="nav-brand" id="admin-trigger">MovieTalk</div>
-    <div class="nav-links">
-        <button onclick="showSection('home')">Home</button>
-        <button onclick="showSection('analyzer')">Smart Analyzer ✨</button>
-        <button onclick="showSection('voting')">Voting</button>
-        <button onclick="showSection('admins')">Admins</button>
-    </div>
+  <div class="nav-brand" onclick="showSection('home')">MovieTalk</div>
+  <div class="nav-links">
+    <button onclick="showSection('home')">Home</button>
+    <button onclick="showSection('analyzer')">Smart Analyzer ✨</button>
+    <button onclick="showSection('admins')">Admins</button>
+  </div>
 </nav>
 
 <section id="home" class="active">
-    <div class="hero">
-        <h2>Watch. Discuss. Learn.</h2>
-        <p>Welcome at MovieTalk Club</p>
-    </div>
+  <div class="hero">
+    <h2>Watch. Discuss. Learn.</h2>
+    <p>Welcome at MovieTalk Club</p>
+  </div>
 
-    <h2 class="section-title">Upcoming Screenings</h2>
-    <div class="container" id="screenings-list">
-        <div class="movie-card" data-title="Dead Poets Society">
-            <div class="movie-poster">Dead Poets Society</div>
-            <div class="movie-info">
-                <div class="meta-data">
-                    <span>📅 Nov 15</span>
-                    <span>⏰ 12:00 PM</span>
-                    <span>📍 Hall B</span>
-                </div>
-                <div class="description">
-                    Join us for an open discussion about one of the greatest films in cinema, exploring literary and linguistic themes interactively.
-                </div>
-            </div>
-            <button class="delete-btn">Delete</button>
+  <h2 class="section-title">Upcoming Screenings</h2>
+
+  <div class="container">
+    <div class="movie-card">
+      <div class="movie-poster">Dead Poets Society</div>
+      <div class="movie-info">
+        <div class="meta-data">
+          <span>📅 Nov 15</span>
+          <span>⏰ 12:00 PM</span>
+          <span>📍 Hall B</span>
         </div>
+        <div class="description">
+          Join us for an open discussion exploring literature, language, and identity through cinema.
+        </div>
+      </div>
     </div>
-
-    <div class="admin-controls">
-        <button id="add-screening-btn">Add Screening</button>
-    </div>
+  </div>
 </section>
 
 <section id="analyzer">
-    <div class="container">
-        <div class="analyzer-box">
-            <h2 style="font-family: 'Playfair Display', serif;">Smart Analyzer</h2>
-            <p>Enter the movie title for a professional summary and discussion points.</p>
-            <input type="text" id="movie-input" placeholder="Movie title...">
-            <br>
-            <button class="btn-main" onclick="analyzeMovie()">Analyze Movie</button>
-            <div id="result" style="margin-top: 30px;"></div>
-        </div>
+  <div class="container">
+    <div class="analyzer-box">
+      <h2 style="font-family:'Playfair Display',serif;">Smart Analyzer</h2>
+      <p>Enter a movie name to get discussion points and themes.</p>
+      <input type="text" placeholder="Movie name...">
+      <br>
+      <button class="btn-main">Analyze</button>
     </div>
-</section>
-
-<section id="voting">
-    <h2 class="section-title">Voting</h2>
-    <div class="container" id="voting-list"></div>
+  </div>
 </section>
 
 <section id="admins">
-    <h2 class="section-title">Admins</h2>
-    <div class="admins-section" id="admins-list"></div>
+  <div class="admin-card">
+    <div class="gold-circle"></div>
+    <h3>Suha Kababji</h3>
+    <p><strong>Club Coordinator</strong></p>
+    <p>+972 59-325-9597<br>(WhatsApp)</p>
+  </div>
 </section>
 
 <script>
-// Section toggle
-function showSection(id) {
+  function showSection(id) {
     document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-}
-
-// Admin secret panel
-let clicks = 0;
-let timer;
-document.getElementById('admin-trigger').addEventListener('click', () => {
-    clicks++;
-    clearTimeout(timer);
-    timer = setTimeout(() => clicks = 0, 1500); // reset if slow
-    if(clicks === 5) {
-        let p = prompt("Password:");
-        if(p === "mtc.english") {
-            alert("Welcome Suha! Admin mode activated.");
-            document.querySelectorAll('.admin-controls').forEach(el => el.style.display = 'block');
-            enableDelete(); // Activate delete buttons
-        }
-        clicks = 0;
-    }
-});
-
-// Movie analyzer DB with discussion points
-const db = {
-    "inception": "Inception follows Dom Cobb, a skilled thief who steals secrets from people's subconscious during dreams. The movie explores complex themes like reality vs. dreams, guilt, and personal redemption. Discussion points: the spinning top symbolism, Cobb’s character development, and moral dilemmas. Key vocabulary: 'subconscious', 'projection', 'inception'.",
-    "joker": "Joker portrays Arthur Fleck's transformation from a struggling comedian to the infamous criminal Joker, highlighting social neglect and mental health issues. Discussion points: society's influence, character motivations, and cinematic techniques. Key vocabulary: 'psychopathy', 'neglect', 'transformation'."
-};
-
-function analyzeMovie() {
-    let input = document.getElementById('movie-input').value.toLowerCase();
-    let res = document.getElementById('result');
-    if(db[input]) res.innerHTML = `<div style="padding:20px; border-right:4px solid green; background:#f0f0f0;">${db[input]}</div>`;
-    else res.innerHTML = "This movie will be added soon by the administration.";
-}
-
-// Dynamic Voting
-const votingList = document.getElementById('voting-list');
-const screeningsList = document.getElementById('screenings-list');
-
-function createVotingOption(title) {
-    const voteCard = document.createElement('div');
-    voteCard.className = 'vote-card';
-    voteCard.innerHTML = `<span>${title}</span><button class="vote-btn">Vote</button>`;
-    const btn = voteCard.querySelector('button');
-    if(localStorage.getItem(`voted-${title}`)) btn.disabled = true;
-    btn.addEventListener('click', () => {
-        localStorage.setItem(`voted-${title}`, 'true');
-        btn.disabled = true;
-        alert('Thank you for voting!');
-    });
-    votingList.appendChild(voteCard);
-}
-
-// Initialize voting options
-document.querySelectorAll('.movie-card').forEach(card => {
-    createVotingOption(card.dataset.title);
-});
-
-// Admin Add Screening
-document.getElementById('add-screening-btn').addEventListener('click', () => {
-    const title = prompt("Movie Title:");
-    const date = prompt("Date (e.g., Nov 20):");
-    const time = prompt("Time (e.g., 3:00 PM):");
-    const hall = prompt("Hall (e.g., A):");
-    const desc = prompt("Description:");
-
-    if(title && date && time && hall && desc) {
-        const movieCard = document.createElement('div');
-        movieCard.className = 'movie-card';
-        movieCard.dataset.title = title;
-        movieCard.innerHTML = `
-            <div class="movie-poster">${title}</div>
-            <div class="movie-info">
-                <div class="meta-data">
-                    <span>📅 ${date}</span>
-                    <span>⏰ ${time}</span>
-                    <span>📍 Hall ${hall}</span>
-                </div>
-                <div class="description">${desc}</div>
-            </div>
-            <button class="delete-btn">Delete</button>
-        `;
-        screeningsList.appendChild(movieCard);
-        createVotingOption(title);
-        enableDelete(); // Ensure delete button works for new card
-    }
-});
-
-// Enable Delete buttons
-function enableDelete() {
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.style.display = 'block';
-        btn.onclick = () => {
-            const card = btn.closest('.movie-card');
-            const title = card.dataset.title;
-
-            // Remove from Home
-            card.remove();
-
-            // Remove from Voting
-            const voteButtons = document.querySelectorAll('.vote-card');
-            voteButtons.forEach(v => {
-                if(v.querySelector('span').innerText === title) v.remove();
-            });
-
-            alert(`${title} has been deleted!`);
-        };
-    });
-}
-
-// Add Admin card
-const adminsList = document.getElementById('admins-list');
-const adminCard = document.createElement('div');
-adminCard.className = 'admin-card';
-adminCard.innerHTML = `
-    <h3>Suha Kababji</h3>
-    <p>(Club Coordinator)</p>
-    <p>+972 59-325-9597</p>
-    <p style="color:#777;">(WhatsApp)</p>
-`;
-adminsList.appendChild(adminCard);
+  }
 </script>
+
 </body>
 </html>
