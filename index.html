@@ -12,42 +12,36 @@
         import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, getDocs, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
+        // التحقق من وجود الإعدادات لتجنب خطأ 400
+        const configRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        const firebaseConfig = JSON.parse(configRaw);
+        
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'movietalk-club-v4';
-        const apiKey = ""; 
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mtc-v1';
 
-        let user = null;
-        let isAdmin = false;
-        const ADMIN_PWD = "mtc.english";
-
-        const initAuth = async () => {
-            try {
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                startApp();
+            } else {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
+                    signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    await signInAnonymously(auth);
+                    signInAnonymously(auth);
                 }
-            } catch (e) { console.error("Auth Error", e); }
-        };
-
-        onAuthStateChanged(auth, (u) => {
-            user = u;
-            if (user) listenToData();
+            }
         });
 
-        initAuth();
-
-        function listenToData() {
+        function startApp() {
+            // الاستماع للعروض
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'shows'), (snap) => {
                 const shows = [];
                 snap.forEach(d => shows.push({id: d.id, ...d.data()}));
-                shows.sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
                 renderShows(shows);
             });
 
+            // الاستماع للتصويت
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'polls'), (snap) => {
                 const polls = [];
                 snap.forEach(d => polls.push({id: d.id, ...d.data()}));
@@ -57,260 +51,197 @@
 
         function renderShows(shows) {
             const list = document.getElementById('list');
-            const adminList = document.getElementById('admin-shows-list');
-            
+            const adminList = document.getElementById('admin-list');
             if (shows.length === 0) {
-                list.innerHTML = `<div class="text-center p-12 border-2 border-dashed rounded-[2rem] opacity-30 font-bold italic">لا توجد عروض منشورة..</div>`;
-                adminList.innerHTML = `<p class="text-xs opacity-50">لا يوجد عروض لحذفها</p>`;
+                list.innerHTML = `<p class="text-center opacity-40 py-10">لا توجد عروض منشورة</p>`;
+                adminList.innerHTML = "";
                 return;
             }
-
-            // لعامة الطلاب
             list.innerHTML = shows.map(s => `
-                <div class="bg-white rounded-[2rem] shadow-sm flex flex-col md:flex-row border-2 border-[#D7CCC8] overflow-hidden mb-6">
-                    <div class="bg-[#5D4037] text-white p-10 md:w-1/3 text-center flex flex-col justify-center">
-                        <h4 class="text-2xl font-black italic" style="font-family: 'Playfair Display', serif;">${s.title}</h4>
-                    </div>
-                    <div class="p-8 md:w-2/3 text-right">
-                        <div class="flex flex-wrap gap-2 mb-4 text-[10px] font-black uppercase tracking-widest">
-                            <span class="bg-stone-100 px-3 py-1 rounded-lg">📅 ${s.date}</span>
-                            <span class="bg-stone-100 px-3 py-1 rounded-lg">🕒 ${s.time}</span>
-                            <span class="bg-teal-50 px-3 py-1 rounded-lg teal-text">📍 ${s.room}</span>
-                        </div>
-                        <p class="text-stone-700 font-medium">${s.desc}</p>
-                    </div>
+                <div class="bg-white p-6 rounded-3xl border-2 mb-4 shadow-sm">
+                    <h4 class="text-xl font-bold teal-text mb-2">${s.title}</h4>
+                    <div class="text-xs text-stone-500 mb-2 font-bold uppercase">📅 ${s.date} | 🕒 ${s.time} | 📍 ${s.room}</div>
+                    <p class="text-sm text-stone-700">${s.desc}</p>
                 </div>
             `).join('');
 
-            // لقائمة الحذف في لوحة التحكم
             adminList.innerHTML = shows.map(s => `
-                <div class="flex justify-between items-center bg-stone-50 p-3 rounded-xl border mb-2">
-                    <span class="text-sm font-bold">${s.title}</span>
-                    <button onclick="deleteShow('${s.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold">🗑️ حذف</button>
+                <div class="flex justify-between p-2 border-b text-sm">
+                    <span>${s.title}</span>
+                    <button onclick="deleteShow('${s.id}')" class="text-red-500">حذف</button>
                 </div>
             `).join('');
         }
 
         function renderPolls(polls) {
-            const pollList = document.getElementById('poll-list');
-            const hasVoted = localStorage.getItem('mtc_voted_' + appId);
-
+            const pollDiv = document.getElementById('poll-div');
+            const voted = localStorage.getItem('voted_' + appId);
             if (polls.length === 0) {
-                pollList.innerHTML = `<p class="opacity-40 italic py-10">لا يوجد تصويت حالياً</p>`;
+                pollDiv.innerHTML = `<p class="opacity-40 text-sm italic">التصويت مغلق</p>`;
                 return;
             }
-
-            const total = polls.reduce((sum, p) => sum + (p.votes || 0), 0);
-            pollList.innerHTML = polls.map(p => {
-                const percent = total > 0 ? Math.round(((p.votes || 0) / total) * 100) : 0;
+            const total = polls.reduce((a, b) => a + (b.votes || 0), 0);
+            pollDiv.innerHTML = polls.map(p => {
+                const perc = total > 0 ? Math.round((p.votes/total)*100) : 0;
                 return `
-                <div class="bg-stone-50 p-5 rounded-3xl border border-stone-200 mb-4 text-right">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="font-bold text-stone-800">${p.movieName}</span>
-                        <span class="text-sm font-black teal-text">${percent}% (${p.votes || 0})</span>
+                <div class="bg-stone-50 p-4 rounded-2xl border mb-3">
+                    <div class="flex justify-between text-sm font-bold mb-1"><span>${p.movieName}</span><span>${perc}%</span></div>
+                    <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden mb-3">
+                        <div class="bg-teal-600 h-full" style="width:${perc}%"></div>
                     </div>
-                    <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden mb-4">
-                        <div class="bg-teal-600 h-full transition-all duration-500" style="width: ${percent}%"></div>
-                    </div>
-                    ${!hasVoted ? 
-                        `<button onclick="voteFor('${p.id}')" class="w-full bg-white border-2 border-teal-600 teal-text py-2 rounded-2xl font-bold hover:bg-teal-600 hover:text-white transition-all text-xs">تصويت</button>` : 
-                        `<div class="text-center text-[10px] text-stone-400 font-bold uppercase">تم تسجيل صوتك</div>`
-                    }
-                </div>
-                `;
+                    ${!voted ? `<button onclick="vote('${p.id}')" class="w-full py-1 border border-teal-600 teal-text rounded-lg text-xs font-bold">تصويت</button>` : ''}
+                </div>`;
             }).join('');
         }
 
-        window.voteFor = async (id) => {
-            if (localStorage.getItem('mtc_voted_' + appId)) return alert("لقد قمتِ بالتصويت مسبقاً!");
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'polls', id);
-            await updateDoc(docRef, { votes: increment(1) });
-            localStorage.setItem('mtc_voted_' + appId, 'true');
-            alert("شكراً لكِ! تم تسجيل صوتك.");
+        // Action Functions
+        window.deleteShow = async (id) => {
+            if(confirm("حذف؟")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shows', id));
         };
 
-        window.deleteShow = async (id) => {
-            if(!confirm("هل أنتِ متأكدة من حذف هذا العرض؟")) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shows', id));
+        window.vote = async (id) => {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'polls', id), { votes: increment(1) });
+            localStorage.setItem('voted_' + appId, 'true');
         };
 
         window.saveShow = async () => {
-            const f = {
-                title: document.getElementById('t').value,
-                date: document.getElementById('d').value,
-                time: document.getElementById('tm').value,
-                room: document.getElementById('r').value,
-                desc: document.getElementById('ds').value
+            const data = {
+                title: document.getElementById('t1').value,
+                date: document.getElementById('t2').value,
+                time: document.getElementById('t3').value,
+                room: document.getElementById('t4').value,
+                desc: document.getElementById('t5').value,
+                createdAt: Date.now()
             };
-            if(!f.title) return alert("أدخلي اسم الفيلم");
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'shows'), { ...f, createdAt: Date.now() });
-            alert("تم النشر!");
-            ['t','d','tm','r','ds'].forEach(id => document.getElementById(id).value = '');
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'shows'), data);
+            alert("تم النشر");
         };
 
-        window.addPoll = async () => {
-            const name = document.getElementById('p-name').value;
-            if(!name) return;
+        window.addP = async () => {
+            const name = document.getElementById('pn').value;
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'polls'), { movieName: name, votes: 0 });
-            document.getElementById('p-name').value = "";
+            document.getElementById('pn').value = "";
         };
 
-        window.resetPolls = async () => {
-            if(!confirm("سيتم حذف جميع الخيارات نهائياً. موافقة؟")) return;
-            try {
-                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'polls'));
-                const deletePromises = snap.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'polls', d.id)));
-                await Promise.all(deletePromises);
-                alert("تم تصفير التصويت بنجاح.");
-            } catch (e) { console.error(e); alert("فشل الحذف، حاول مجدداً."); }
-        };
-
-        window.login = () => {
-            if (document.getElementById('pwd').value === ADMIN_PWD) {
-                document.getElementById('login-box').classList.add('hidden');
-                document.getElementById('admin-box').classList.remove('hidden');
-                isAdmin = true;
-            } else { alert("خطأ"); }
+        window.resetP = async () => {
+            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'polls'));
+            snap.forEach(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'polls', d.id)));
         };
 
         window.showTab = (id) => {
-            document.querySelectorAll('.tab').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
-            window.scrollTo(0,0);
         };
 
-        window.analyze = async () => {
-            const m = document.getElementById('ai-in').value;
-            if(!m) return;
-            const resBox = document.getElementById('ai-res');
-            resBox.innerHTML = "جاري التحليل...";
-            resBox.classList.remove('hidden');
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: `Analyze the movie "${m}" for an English club. Mention 3 themes and 3 vocabularies.` }] }] })
-            });
-            const data = await response.json();
-            resBox.innerHTML = data.candidates?.[0]?.content?.parts?.[0]?.text.replace(/\n/g, '<br>');
-        };
-
-        let clicks = 0;
-        window.footerClick = () => {
-            clicks++;
-            if (clicks >= 5) {
-                clicks = 0;
-                document.getElementById('login-box').classList.toggle('hidden');
-                document.getElementById('login-box').scrollIntoView({behavior: 'smooth'});
+        window.checkLogin = () => {
+            if(document.getElementById('pw').value === 'mtc.english') {
+                document.getElementById('admin-pnl').classList.remove('hidden');
+                document.getElementById('lgn').classList.add('hidden');
             }
+        };
+
+        let clks = 0;
+        window.footerClk = () => { if(++clks >= 5) { clks=0; document.getElementById('lgn').classList.toggle('hidden'); }};
+
+        // ميزة Gemini البسيطة (تحليل الفيلم)
+        window.aiAnalyze = async () => {
+            const m = document.getElementById('ai-in').value;
+            const res = document.getElementById('ai-res');
+            res.innerHTML = "جاري التحليل...";
+            try {
+                const apiKey = ""; // سيتم تعبئته تلقائياً
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `Analyze movie "${m}" for English learners.` }] }] })
+                });
+                const d = await response.json();
+                res.innerHTML = d.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+            } catch (e) { res.innerHTML = "خطأ في الاتصال"; }
         };
     </script>
 
     <style>
-        body { font-family: 'Tajawal', sans-serif; background-color: #FDFCF0; color: #5D4037; }
-        .teal-bg { background-color: #008080; }
+        body { font-family: 'Tajawal', sans-serif; background: #FDFCF0; }
+        .teal-bg { background: #008080; }
         .teal-text { color: #008080; }
-        .tab { animation: fadeIn 0.4s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="pb-20">
 
-    <nav class="teal-bg text-white p-5 sticky top-0 z-50 shadow-xl">
-        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 class="text-2xl font-black italic font-serif">MovieTalk Club</h1>
-            <div class="flex gap-4 text-[10px] font-black uppercase tracking-widest">
-                <button onclick="showTab('home')">الرئيسية</button>
-                <button onclick="showTab('ai-tab')">المحلل الذكي</button>
-                <button onclick="showTab('vote-tab')">التصويت</button>
-                <button onclick="showTab('contact')">المسؤولين</button>
-            </div>
+    <nav class="teal-bg text-white p-4 sticky top-0 z-50 flex justify-between items-center shadow-md">
+        <span class="font-black italic">MovieTalk</span>
+        <div class="flex gap-3 text-[10px] font-bold">
+            <button onclick="showTab('pg1')">الرئيسية</button>
+            <button onclick="showTab('pg2')">المحلل</button>
+            <button onclick="showTab('pg3')">التصويت</button>
+            <button onclick="showTab('pg4')">المسؤولين</button>
         </div>
     </nav>
 
-    <header class="py-16 text-center bg-[#E0F2F1] border-b border-[#D7CCC8]">
-        <h2 class="text-4xl font-black italic teal-text mb-2 font-serif">Watch. Discuss. Learn.</h2>
-        <p class="text-stone-400 font-bold text-[10px] tracking-[0.3em] uppercase">English Dept Portal</p>
-    </header>
-
-    <main class="container mx-auto p-6 max-w-4xl pb-32">
+    <main class="p-6 max-w-2xl mx-auto">
         
-        <!-- الرئيسية -->
-        <div id="home" class="tab space-y-8">
-            <h3 class="text-2xl font-black border-r-4 border-teal-800 pr-3">العروض القادمة</h3>
+        <div id="pg1" class="tab-content">
+            <h2 class="text-xl font-black mb-6">العروض القادمة</h2>
             <div id="list"></div>
         </div>
 
-        <!-- المحلل الذكي -->
-        <div id="ai-tab" class="tab hidden max-w-2xl mx-auto py-10">
-            <div class="bg-white p-10 rounded-[2.5rem] shadow-xl text-center border-4 border-amber-50">
-                <h3 class="text-2xl font-black teal-text mb-6">🤖 المحلل الذكي</h3>
-                <input id="ai-in" type="text" placeholder="Movie Title..." class="w-full p-4 border-2 rounded-2xl text-center font-bold mb-4 outline-none focus:border-amber-400">
-                <button onclick="analyze()" class="teal-bg text-white w-full py-4 rounded-2xl font-black shadow-lg">تحليل ✨</button>
-                <div id="ai-res" class="hidden mt-8 p-6 bg-stone-50 rounded-2xl border-2 text-left text-sm leading-relaxed" dir="ltr"></div>
+        <div id="pg2" class="tab-content hidden text-center">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border">
+                <h2 class="text-xl font-black mb-4">🤖 المحلل الذكي</h2>
+                <input id="ai-in" type="text" placeholder="اسم الفيلم بالإنجليزية" class="w-full p-3 border rounded-xl mb-3 text-center">
+                <button onclick="aiAnalyze()" class="teal-bg text-white w-full py-3 rounded-xl font-bold">تحليل ✨</button>
+                <div id="ai-res" class="mt-6 text-left text-xs bg-stone-50 p-4 rounded-xl hidden" dir="ltr"></div>
             </div>
         </div>
 
-        <!-- التصويت -->
-        <div id="vote-tab" class="tab hidden max-w-xl mx-auto py-10">
-            <div class="bg-white p-10 rounded-[3rem] shadow-xl border-4 border-teal-50 text-center">
-                <h3 class="text-2xl font-black teal-text mb-6">🗳️ صوتك يهمنا</h3>
-                <div id="poll-list"></div>
+        <div id="pg3" class="tab-content hidden text-center">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border">
+                <h2 class="text-xl font-black mb-4">🗳️ التصويت</h2>
+                <div id="poll-div"></div>
             </div>
         </div>
 
-        <!-- المسؤولين (تصغير المربع) -->
-        <div id="contact" class="tab hidden text-center py-20">
-            <div class="bg-white p-8 rounded-[2.5rem] border-4 border-teal-800 shadow-xl inline-block px-10">
-                <div class="text-2xl mb-4">🎬</div>
-                <h4 class="text-xl font-black mb-1">Suha Kababji</h4>
-                <p class="text-stone-400 text-xs font-bold mb-6 italic tracking-widest uppercase">Coordinator</p>
-                <div class="bg-stone-50 p-4 rounded-2xl border-2 border-dashed border-stone-200">
-                    <a href="tel:0593259597" class="text-2xl font-black teal-text tracking-tighter" dir="ltr">0593259597</a>
-                </div>
+        <div id="pg4" class="tab-content hidden text-center pt-10">
+            <div class="bg-white p-6 rounded-3xl border-2 border-teal-800 inline-block shadow-md">
+                <div class="text-lg font-black">Suha Kababji</div>
+                <div class="text-xs text-stone-400 mb-4 italic uppercase tracking-widest">Coordinator</div>
+                <div class="bg-stone-50 p-3 rounded-xl border border-dashed font-black teal-text tracking-tighter">0593259597</div>
             </div>
         </div>
 
-        <!-- لوحة التحكم -->
-        <div id="login-box" class="hidden mt-20 p-8 bg-white rounded-[2.5rem] border-4 border-teal-600 text-center shadow-2xl">
-            <input type="password" id="pwd" class="p-4 border-2 rounded-xl text-center w-full max-w-xs mb-4" placeholder="Password">
-            <button onclick="login()" class="teal-bg text-white px-10 py-3 rounded-xl font-black">دخول</button>
+        <!-- Admin Section -->
+        <div id="lgn" class="hidden mt-10 p-4 bg-white border rounded-2xl text-center">
+            <input id="pw" type="password" placeholder="Pass" class="p-2 border rounded mr-2">
+            <button onclick="checkLogin()" class="teal-bg text-white px-4 py-2 rounded">دخول</button>
         </div>
 
-        <div id="admin-box" class="hidden mt-10 bg-white p-8 rounded-[2.5rem] shadow-2xl border-4 border-teal-600 space-y-8">
-            <div class="border-b-2 border-dashed pb-6">
-                <h4 class="font-black teal-text mb-6">➕ نشر عرض جديد:</h4>
-                <div class="space-y-3">
-                    <input id="t" type="text" placeholder="اسم الفيلم" class="w-full p-4 border-2 rounded-2xl">
-                    <div class="grid grid-cols-3 gap-2">
-                        <input id="d" type="text" placeholder="التاريخ" class="p-4 border-2 rounded-2xl">
-                        <input id="tm" type="text" placeholder="الوقت" class="p-4 border-2 rounded-2xl">
-                        <input id="r" type="text" placeholder="القاعة" class="p-4 border-2 rounded-2xl">
-                    </div>
-                    <textarea id="ds" placeholder="الوصف..." class="w-full p-4 border-2 rounded-2xl h-24"></textarea>
-                    <button onclick="saveShow()" class="teal-bg text-white w-full py-4 rounded-2xl font-black">نشر 🚀</button>
-                </div>
+        <div id="admin-pnl" class="hidden mt-10 bg-white p-6 rounded-3xl border-2 border-teal-600">
+            <h3 class="font-bold mb-4">إضافة عرض:</h3>
+            <input id="t1" type="text" placeholder="العنوان" class="w-full p-2 border rounded mb-2 text-sm">
+            <div class="grid grid-cols-3 gap-1 mb-2">
+                <input id="t2" type="text" placeholder="التاريخ" class="p-2 border rounded text-xs">
+                <input id="t3" type="text" placeholder="الوقت" class="p-2 border rounded text-xs">
+                <input id="t4" type="text" placeholder="القاعة" class="p-2 border rounded text-xs">
             </div>
+            <textarea id="t5" placeholder="الوصف" class="w-full p-2 border rounded mb-2 text-xs"></textarea>
+            <button onclick="saveShow()" class="teal-bg text-white w-full py-2 rounded font-bold mb-6">نشر</button>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                    <h4 class="font-black text-red-600 mb-4">🗑️ حذف العروض:</h4>
-                    <div id="admin-shows-list" class="max-h-48 overflow-y-auto"></div>
-                </div>
-                <div>
-                    <h4 class="font-black text-amber-600 mb-4">🗳️ إدارة التصويت:</h4>
-                    <div class="flex gap-2 mb-3">
-                        <input id="p-name" type="text" placeholder="فيلم جديد" class="flex-1 p-3 border-2 rounded-xl text-sm">
-                        <button onclick="addPoll()" class="bg-amber-500 text-white px-4 rounded-xl font-bold text-xs">إضافة</button>
-                    </div>
-                    <button onclick="resetPolls()" class="w-full text-red-500 text-[10px] font-bold underline">تصفير كافة خيارات التصويت ⚠️</button>
-                </div>
+            <div class="border-t pt-4">
+                <h3 class="font-bold mb-2">حذف العروض:</h3>
+                <div id="admin-list" class="mb-6"></div>
+                <h3 class="font-bold mb-2">التصويت:</h3>
+                <input id="pn" type="text" placeholder="فيلم جديد" class="p-2 border rounded w-full mb-2">
+                <button onclick="addP()" class="bg-amber-500 text-white w-full py-2 rounded font-bold">إضافة خيار</button>
+                <button onclick="resetP()" class="text-red-500 text-[10px] underline block mt-2">تصفير الكل</button>
             </div>
         </div>
+
     </main>
 
-    <footer onclick="footerClick()" class="py-16 text-center border-t bg-stone-50 cursor-pointer">
-        <p class="font-black text-[10px] uppercase tracking-[0.4em] opacity-30">MovieTalk Club | English Dept</p>
+    <footer onclick="footerClk()" class="py-10 text-center opacity-20 text-[10px] uppercase font-black tracking-widest">
+        MovieTalk Club | English Dept
     </footer>
 
 </body>
-</html>
+    </html>
