@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieTalk Club | English Dept</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, getDocs, doc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+
+        // إعدادات القاعدة السحابية (يتم توفيرها تلقائياً من البيئة)
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'movietalk-club-suha';
+
+        let currentUser = null;
+        let unsubscribe = null;
+        const ADMIN_PWD = "mtc.english";
+
+        // 1. نظام تسجيل الدخول المجهول (ضروري للأمان)
+        const initAuth = async () => {
+            try { 
+                await signInAnonymously(auth); 
+            } catch (e) { 
+                console.error("Auth Error:", e); 
+            }
+        };
+
+        // 2. مراقبة حالة المستخدم وجلب البيانات
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                listenToData();
+            }
+        });
+
+        initAuth();
+
+        // 3. جلب البيانات الحية من السحابة
+        function listenToData() {
+            if (!currentUser) return;
+            const showsRef = collection(db, 'artifacts', appId, 'public', 'data', 'shows');
+            
+            unsubscribe = onSnapshot(query(showsRef), (snap) => {
+                const shows = [];
+                snap.forEach(d => shows.push({id: d.id, ...d.data()}));
+                // ترتيب العروض حسب تاريخ الإضافة (الأحدث أولاً)
+                shows.sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+                render(shows);
+            }, (err) => {
+                console.error("Firestore Permission Error:", err);
+            });
+        }
+
+        // 4. عرض البيانات في الصفحة
+        function render(shows) {
+            const list = document.getElementById('list');
+            if (shows.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center p-12 border-2 border-dashed rounded-[2rem] opacity-40">
+                        <p class="font-bold text-lg">لا توجد عروض منشورة حالياً.. بانتظار إضافات النادي.</p>
+                    </div>`;
+                return;
+            }
+            list.innerHTML = shows.map(s => `
+                <div class="bg-white rounded-[2rem] shadow-sm flex flex-col md:flex-row border-2 border-[#D7CCC8] overflow-hidden hover:shadow-lg transition-shadow">
+                    <div class="bg-[#5D4037] text-white p-10 md:w-1/3 text-center flex flex-col justify-center">
+                        <h4 class="text-2xl font-black italic font-serif" style="font-family: 'Playfair Display', serif;">${s.title}</h4>
+                        <div class="w-8 h-1 bg-teal-500 mx-auto mt-4 rounded-full"></div>
+                    </div>
+                    <div class="p-8 md:w-2/3">
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="bg-stone-100 px-3 py-1 rounded-lg text-xs font-bold text-stone-600">📅 ${s.date}</span>
+                            <span class="bg-stone-100 px-3 py-1 rounded-lg text-xs font-bold text-stone-600">🕒 ${s.time}</span>
+                            <span class="bg-teal-50 px-3 py-1 rounded-lg text-xs font-bold text-teal-700 border border-teal-100">📍 ${s.room}</span>
+                        </div>
+                        <p class="text-stone-700 font-medium leading-relaxed">${s.desc}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 5. وظائف المسؤولة (إضافة وحذف)
+        window.saveShow = async () => {
+            if (!currentUser) return;
+            const fields = {
+                title: document.getElementById('t').value.trim(),
+                date: document.getElementById('d').value.trim(),
+                time: document.getElementById('tm').value.trim(),
+                room: document.getElementById('r').value.trim(),
+                desc: document.getElementById('ds').value.trim()
+            };
+            
+            if (Object.values(fields).every(v => v)) {
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'shows'), {
+                        ...fields,
+                        createdAt: Date.now()
+                    });
+                    alert("تم نشر العرض بنجاح لجميع الطلاب!");
+                    ['t','d','tm','r','ds'].forEach(id => document.getElementById(id).value = '');
+                    document.getElementById('admin-box').classList.add('hidden');
+                } catch (e) {
+                    alert("خطأ في الاتصال بالسحابة");
+                }
+            } else { alert("يرجى ملء جميع الخانات"); }
+        };
+
+        window.deleteAll = async () => {
+            if (!currentUser || !confirm("هل أنتِ متأكدة من حذف جميع العروض المنشورة؟")) return;
+            try {
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'shows'));
+                await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shows', d.id))));
+                alert("تم تنظيف الموقع بنجاح.");
+                document.getElementById('admin-box').classList.add('hidden');
+            } catch (e) { alert("خطأ في الحذف"); }
+        };
+
+        window.login = () => {
+            if (document.getElementById('pwd').value === ADMIN_PWD) {
+                document.getElementById('login-box').classList.add('hidden');
+                document.getElementById('admin-box').classList.remove('hidden');
+                document.getElementById('admin-box').scrollIntoView({ behavior: 'smooth' });
+            } else { alert("كلمة السر غير صحيحة"); }
+            document.getElementById('pwd').value = "";
+        };
+
+        window.showTab = (id) => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            window.scrollTo(0,0);
+        };
+
+        // تفعيل لوحة التحكم عبر 5 ضغطات في الفوتر
+        let clicks = 0;
+        window.footerClick = () => {
+            clicks++;
+            if (clicks >= 5) {
+                clicks = 0;
+                document.getElementById('login-box').classList.remove('hidden');
+                document.getElementById('login-box').scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+    </script>
+
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background-color: #F5F5DC; color: #5D4037; }
+        .teal-text { color: #008080; }
+        .teal-bg { background-color: #008080; }
+        .tab { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="teal-bg text-white p-5 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-black tracking-tighter">MovieTalk Club</h1>
+            <div class="flex gap-6 text-sm font-bold">
+                <button onclick="showTab('home')" class="hover:opacity-70">الرئيسية</button>
+                <button onclick="showTab('contact')" class="hover:opacity-70">المسؤولين</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="py-20 px-6 text-center bg-[#E0F2F1] border-b border-[#D7CCC8]">
+        <h2 class="text-5xl font-black italic teal-text mb-4" style="font-family: 'Playfair Display', serif;">Watch. Discuss. Learn.</h2>
+        <p class="text-xl font-bold text-stone-500">English Department | Official Portal</p>
+    </header>
+
+    <main class="container mx-auto p-6 max-w-4xl mt-8 pb-20">
+        
+        <!-- Home Tab -->
+        <div id="home" class="tab space-y-10">
+            <h3 class="text-3xl font-black border-r-8 border-teal-800 pr-4">العروض القادمة</h3>
+            
+            <!-- Login Box (Hidden) -->
+            <div id="login-box" class="hidden bg-white p-8 rounded-[2rem] shadow-2xl border-4 border-teal-600 text-center space-y-4">
+                <h4 class="font-bold teal-text">لوحة تحكم المسؤولة</h4>
+                <input type="password" id="pwd" class="p-3 border-2 rounded-xl text-center w-full max-w-xs outline-none focus:border-teal-600" placeholder="أدخل كلمة السر">
+                <br>
+                <button onclick="login()" class="teal-bg text-white px-10 py-3 rounded-xl font-black hover:brightness-110">دخول</button>
+            </div>
+
+            <!-- Admin Panel (Hidden) -->
+            <div id="admin-box" class="hidden bg-white p-8 rounded-[2.5rem] shadow-2xl border-4 border-teal-600 space-y-4 animate-bounce-short">
+                <h4 class="font-bold text-xl teal-text">إضافة عرض جديد:</h4>
+                <input id="t" type="text" placeholder="اسم الفيلم بالإنجليزية" class="w-full p-4 border-2 rounded-2xl outline-none focus:border-teal-600">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input id="d" type="text" placeholder="التاريخ (مثلاً 20 يناير)" class="p-4 border-2 rounded-2xl">
+                    <input id="tm" type="text" placeholder="الوقت" class="p-4 border-2 rounded-2xl">
+                    <input id="r" type="text" placeholder="رقم القاعة" class="p-4 border-2 rounded-2xl">
+                </div>
+                <textarea id="ds" placeholder="ماذا سنناقش؟" class="w-full p-4 border-2 rounded-2xl h-32"></textarea>
+                <button onclick="saveShow()" class="teal-bg text-white w-full py-5 rounded-2xl font-black text-lg shadow-lg">نشر العرض لجميع الطلاب 🚀</button>
+                <button onclick="deleteAll()" class="text-red-500 text-xs w-full underline mt-4">حذف كافة العروض من السحابة</button>
+            </div>
+
+            <!-- Dynamic Shows List -->
+            <div id="list" class="space-y-8 min-h-[300px]">
+                <div class="text-center py-20 opacity-20">
+                    <p class="font-bold italic">جاري تحميل البيانات من السحابة...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Tab -->
+        <div id="contact" class="tab hidden max-w-md mx-auto text-center py-10">
+            <div class="bg-white p-12 rounded-[3rem] border-8 border-teal-800 shadow-2xl">
+                <div class="w-20 h-20 bg-teal-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                    <span class="text-4xl">🎬</span>
+                </div>
+                <h4 class="text-3xl font-black mb-2">Suha Kababji</h4>
+                <p class="text-stone-400 font-bold italic mb-8">Club Coordinator</p>
+                <div class="bg-stone-50 p-6 rounded-2xl border-2 border-dashed border-stone-200">
+                    <a href="tel:0593259597" class="text-3xl font-black teal-text tracking-tighter" dir="ltr">0593259597</a>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer onclick="footerClick()" class="py-20 text-center opacity-30 cursor-pointer hover:opacity-100 transition-opacity">
+        <p class="font-black text-sm uppercase tracking-widest">MovieTalk Club | English Dept</p>
+        <p class="text-xs mt-2">© 2026 - All Rights Reserved</p>
+    </footer>
+
+</body>
+</html>
