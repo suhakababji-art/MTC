@@ -244,7 +244,6 @@ section.active { display: block; }
             <input type="text" id="movie-input" placeholder="Movie title...">
             <br>
             <button class="btn-main" onclick="analyzeMovie()">Analyze Movie</button>
-            <div id="result" style="margin-top: 30px;"></div>
         </div>
     </div>
 </section>
@@ -260,24 +259,16 @@ section.active { display: block; }
 </section>
 
 <script>
+// Section toggle
 function showSection(id) {
     document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 }
 
+// Admin secret panel
 let clicks = 0;
-document.getElementById('admin-trigger').addEventListener('click', () => {
-    clicks++;
-    if (clicks === 5) {
-        let p = prompt("Password:");
-        if (p === "mtc.english") {
-            alert("Welcome Suha! Admin mode activated.");
-            document.querySelectorAll('.admin-controls, .delete-btn').forEach(el => el.style.display = 'block');
-        }
-        clicks = 0;
-    }
-});
 
+// Movie analyzer DB
 const db = {
     "inception": "The story follows a skilled thief who plants ideas in other people's dreams, a complex and intriguing mission.",
     "joker": "A study of Arthur Fleck, ignored by society, transforming from an ordinary man to a notorious criminal."
@@ -286,13 +277,26 @@ const db = {
 function analyzeMovie() {
     let input = document.getElementById('movie-input').value.toLowerCase();
     let res = document.getElementById('result');
-    if (db[input]) {
-        res.innerHTML = `<div style="padding:20px;border-right:4px solid green;background:#f0f0f0;">${db[input]}</div>`;
+    if(db[input]) {
+        if(!res) {
+            const container = document.createElement('div');
+            container.id = 'result';
+            document.querySelector('.analyzer-box').appendChild(container);
+            res = container;
+        }
+        res.innerHTML = `<div style="padding:20px; border-right:4px solid green; background:#f0f0f0;">${db[input]}</div>`;
     } else {
+        if(!res) {
+            const container = document.createElement('div');
+            container.id = 'result';
+            document.querySelector('.analyzer-box').appendChild(container);
+            res = container;
+        }
         res.innerHTML = "This movie will be added soon by the administration.";
     }
 }
 
+// Voting
 const votingList = document.getElementById('voting-list');
 const screeningsList = document.getElementById('screenings-list');
 
@@ -301,7 +305,7 @@ function createVotingOption(title) {
     voteCard.className = 'vote-card';
     voteCard.innerHTML = `<span>${title}</span><button class="vote-btn">Vote</button>`;
     const btn = voteCard.querySelector('button');
-    if (localStorage.getItem(`voted-${title}`)) btn.disabled = true;
+    if(localStorage.getItem(`voted-${title}`)) btn.disabled = true;
     btn.onclick = () => {
         localStorage.setItem(`voted-${title}`, 'true');
         btn.disabled = true;
@@ -314,13 +318,14 @@ document.querySelectorAll('.movie-card').forEach(card => {
     createVotingOption(card.dataset.title);
 });
 
+// Admin Add Screening
 document.getElementById('add-screening-btn').onclick = () => {
     const title = prompt("Movie Title:");
     const date = prompt("Date:");
     const time = prompt("Time:");
     const hall = prompt("Hall:");
     const desc = prompt("Description:");
-    if (title && date && time && hall && desc) {
+    if(title && date && time && hall && desc) {
         const movieCard = document.createElement('div');
         movieCard.className = 'movie-card';
         movieCard.dataset.title = title;
@@ -347,6 +352,38 @@ document.getElementById('add-screening-btn').onclick = () => {
     }
 };
 
+// Admin Analyzer add
+const analyzerBox = document.querySelector('.analyzer-box');
+const addAnalyzerBtn = document.createElement('button');
+addAnalyzerBtn.textContent = "Add Movie to Analyzer";
+addAnalyzerBtn.className = "btn-main";
+addAnalyzerBtn.style.display = "none";
+analyzerBox.appendChild(addAnalyzerBtn);
+
+addAnalyzerBtn.onclick = () => {
+    const title = prompt("Enter Movie Title:");
+    if (!title) return;
+    const summary = prompt("Enter Summary/Description:");
+    if (!summary) return;
+    db[title.toLowerCase()] = summary;
+    alert(`Movie "${title}" added successfully to Smart Analyzer!`);
+};
+
+// Admin login
+document.getElementById('admin-trigger').addEventListener('click', () => {
+    clicks++;
+    if (clicks === 5) {
+        let p = prompt("Password:");
+        if (p === "mtc.english") {
+            alert("Welcome Suha! Admin mode activated.");
+            document.querySelectorAll('.admin-controls, .delete-btn').forEach(el => el.style.display = 'block');
+            addAnalyzerBtn.style.display = 'inline-block';
+        }
+        clicks = 0;
+    }
+});
+
+// Admin card
 const adminCard = document.createElement('div');
 adminCard.className = 'admin-card';
 adminCard.innerHTML = `
