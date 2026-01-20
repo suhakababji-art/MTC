@@ -97,6 +97,9 @@ nav {
 .movie-info {
     width: 70%;
     padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 .meta-data {
     display: flex;
@@ -104,10 +107,17 @@ nav {
     color: #777;
     font-size: 0.9rem;
     margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
 }
 .description {
     font-size: 1.1rem;
     line-height: 1.8;
+    color: #444;
+}
+.admin-controls {
+    display: none;
+    margin: 20px 50px;
 }
 .delete-btn {
     position: absolute;
@@ -116,23 +126,45 @@ nav {
     background: #ff5252;
     color: white;
     border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
+    padding: 5px 10px;
+    border-radius: 5px;
     cursor: pointer;
     display: none;
 }
-.admin-controls { display:none; }
-
-section { display:none; }
-section.active { display:block; }
-
+.analyzer-box {
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    text-align: center;
+}
+input {
+    width: 80%;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 30px;
+    margin-bottom: 20px;
+    outline: none;
+}
+.btn-main {
+    background: var(--dark-green);
+    color: white;
+    padding: 12px 40px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+section { display: none; }
+section.active { display: block; }
 .vote-card {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     background: #fffdf9;
-    padding: 15px;
     border-radius: 10px;
+    padding: 15px;
     margin-bottom: 15px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
 }
 .vote-btn {
     background: var(--accent-blue);
@@ -141,30 +173,25 @@ section.active { display:block; }
     border-radius: 10px;
     cursor: pointer;
 }
-
-.analyzer-box {
-    background: white;
-    padding: 40px;
-    border-radius: 15px;
+.admins-section { padding: 20px; }
+.admin-card {
+    background: linear-gradient(145deg, #f9f4e6, #f0e5c2);
+    border-radius: 20px;
+    padding: 25px 20px;
+    max-width: 300px;
     text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    color: #2c2c2c;
+    font-family: 'Cairo', sans-serif;
+    margin-top: 20px;
 }
-
-input, textarea {
-    width: 80%;
-    padding: 15px;
-    border-radius: 25px;
-    border: 1px solid #ccc;
-    margin-bottom: 15px;
+.admin-card h3 {
+    margin: 0;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: #b38f00;
 }
-
-.btn-main {
-    background: var(--dark-green);
-    color: white;
-    padding: 12px 40px;
-    border: none;
-    border-radius: 30px;
-    cursor: pointer;
-}
+.admin-card p { margin: 5px 0; }
 </style>
 </head>
 
@@ -198,7 +225,7 @@ input, textarea {
                     <span>📍 Hall B</span>
                 </div>
                 <div class="description">
-                    Join us for an open discussion about literary themes.
+                    Join us for an open discussion about one of the greatest films in cinema, exploring literary and linguistic themes interactively.
                 </div>
             </div>
         </div>
@@ -212,18 +239,12 @@ input, textarea {
 <section id="analyzer">
     <div class="container">
         <div class="analyzer-box">
-            <h2>Smart Analyzer</h2>
-            <input type="text" id="movie-input" placeholder="Movie title">
-            <button class="btn-main" onclick="analyzeMovie()">Analyze</button>
-            <div id="result"></div>
-
-            <!-- ADMIN ONLY -->
-            <div id="admin-analyzer" style="display:none;margin-top:30px;">
-                <h3>Add Movie (Admin)</h3>
-                <input id="admin-title" placeholder="Movie title">
-                <textarea id="admin-desc" placeholder="Analysis"></textarea>
-                <button class="btn-main" onclick="addMovie()">Add</button>
-            </div>
+            <h2 style="font-family: 'Playfair Display', serif;">Smart Analyzer</h2>
+            <p>Enter the movie title for a professional summary and vocabulary explanation.</p>
+            <input type="text" id="movie-input" placeholder="Movie title...">
+            <br>
+            <button class="btn-main" onclick="analyzeMovie()">Analyze Movie</button>
+            <div id="result" style="margin-top: 30px;"></div>
         </div>
     </div>
 </section>
@@ -235,64 +256,105 @@ input, textarea {
 
 <section id="admins">
     <h2 class="section-title">Admins</h2>
-    <div class="container">
-        <strong>Suha Kababji</strong><br>Club Coordinator
-    </div>
+    <div class="admins-section" id="admins-list"></div>
 </section>
 
 <script>
-function showSection(id){
-    document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+function showSection(id) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 }
 
-let db = {
-    "inception":"A skilled thief enters dreams to plant ideas.",
-    "joker":"A man ignored by society descends into madness."
-};
-
-function analyzeMovie(){
-    let t = movieInput.value.toLowerCase();
-    result.innerHTML = db[t] || "This movie will be added soon.";
-}
-
-function addMovie(){
-    let t = adminTitle.value.toLowerCase();
-    let d = adminDesc.value;
-    if(t && d){
-        db[t]=d;
-        alert("Added!");
-        adminTitle.value="";
-        adminDesc.value="";
-    }
-}
-
-let clicks=0;
-admin-trigger.onclick=()=>{
+let clicks = 0;
+document.getElementById('admin-trigger').addEventListener('click', () => {
     clicks++;
-    if(clicks===5){
-        let p=prompt("Password");
-        if(p==="mtc.english"){
-            document.querySelectorAll('.delete-btn,.admin-controls').forEach(e=>e.style.display="block");
-            admin-analyzer.style.display="block";
-            alert("Admin mode ON");
+    if (clicks === 5) {
+        let p = prompt("Password:");
+        if (p === "mtc.english") {
+            alert("Welcome Suha! Admin mode activated.");
+            document.querySelectorAll('.admin-controls, .delete-btn').forEach(el => el.style.display = 'block');
         }
-        clicks=0;
-    }
-};
-
-document.querySelectorAll('.delete-btn').forEach(b=>{
-    b.onclick=()=>{
-        if(confirm("Delete this screening?")){
-            let card=b.parentElement;
-            let title=card.dataset.title;
-            card.remove();
-            document.querySelectorAll('.vote-card').forEach(v=>{
-                if(v.innerText.includes(title)) v.remove();
-            });
-        }
+        clicks = 0;
     }
 });
+
+const db = {
+    "inception": "The story follows a skilled thief who plants ideas in other people's dreams, a complex and intriguing mission.",
+    "joker": "A study of Arthur Fleck, ignored by society, transforming from an ordinary man to a notorious criminal."
+};
+
+function analyzeMovie() {
+    let input = document.getElementById('movie-input').value.toLowerCase();
+    let res = document.getElementById('result');
+    if (db[input]) {
+        res.innerHTML = `<div style="padding:20px;border-right:4px solid green;background:#f0f0f0;">${db[input]}</div>`;
+    } else {
+        res.innerHTML = "This movie will be added soon by the administration.";
+    }
+}
+
+const votingList = document.getElementById('voting-list');
+const screeningsList = document.getElementById('screenings-list');
+
+function createVotingOption(title) {
+    const voteCard = document.createElement('div');
+    voteCard.className = 'vote-card';
+    voteCard.innerHTML = `<span>${title}</span><button class="vote-btn">Vote</button>`;
+    const btn = voteCard.querySelector('button');
+    if (localStorage.getItem(`voted-${title}`)) btn.disabled = true;
+    btn.onclick = () => {
+        localStorage.setItem(`voted-${title}`, 'true');
+        btn.disabled = true;
+        alert('Thank you for voting!');
+    };
+    votingList.appendChild(voteCard);
+}
+
+document.querySelectorAll('.movie-card').forEach(card => {
+    createVotingOption(card.dataset.title);
+});
+
+document.getElementById('add-screening-btn').onclick = () => {
+    const title = prompt("Movie Title:");
+    const date = prompt("Date:");
+    const time = prompt("Time:");
+    const hall = prompt("Hall:");
+    const desc = prompt("Description:");
+    if (title && date && time && hall && desc) {
+        const movieCard = document.createElement('div');
+        movieCard.className = 'movie-card';
+        movieCard.dataset.title = title;
+        movieCard.innerHTML = `
+            <button class="delete-btn">Delete</button>
+            <div class="movie-poster">${title}</div>
+            <div class="movie-info">
+                <div class="meta-data">
+                    <span>📅 ${date}</span>
+                    <span>⏰ ${time}</span>
+                    <span>📍 Hall ${hall}</span>
+                </div>
+                <div class="description">${desc}</div>
+            </div>`;
+        screeningsList.appendChild(movieCard);
+
+        const deleteBtn = movieCard.querySelector('.delete-btn');
+        deleteBtn.onclick = () => {
+            movieCard.remove();
+            localStorage.removeItem(`voted-${title}`);
+        };
+
+        createVotingOption(title);
+    }
+};
+
+const adminCard = document.createElement('div');
+adminCard.className = 'admin-card';
+adminCard.innerHTML = `
+    <h3>Suha Kababji</h3>
+    <p>(Club Coordinator)</p>
+    <p>+972 59-325-9597</p>
+    <p style="color:#777;">(WhatsApp)</p>`;
+document.getElementById('admins-list').appendChild(adminCard);
 </script>
 
 </body>
